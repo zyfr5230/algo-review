@@ -3,20 +3,10 @@ import random
 import requests
 import streamlit as st
 
-import json
-import random
-import requests
-import streamlit as st
-
 # 自动过滤掉可能误入的非ASCII字符（如隐藏空格、特殊符号）
 BIN_ID = str(st.secrets["JSONBIN_BIN_ID"]).strip().encode("ascii", "ignore").decode("ascii")
 API_KEY = str(st.secrets["JSONBIN_API_KEY"]).strip().encode("ascii", "ignore").decode("ascii")
 
-HEADERS = {
-    "Content-Type": "application/json",
-    "X-Master-Key": API_KEY,
-    "X-Bin-Versioning": "false",
-}
 HEADERS = {
     "Content-Type": "application/json",
     "X-Master-Key": API_KEY,
@@ -28,7 +18,11 @@ def load_data():
         url = f"https://api.jsonbin.io/v3/b/{BIN_ID}/latest"
         res = requests.get(url, headers=HEADERS)
         if res.status_code == 200:
-            data = res.json().get("record", [])
+            # 兼容处理：防止返回结构有变化
+            json_data = res.json()
+            data = json_data.get("record", [])
+            if isinstance(data, dict) and "record" in data:
+                data = data["record"]
             return data if isinstance(data, list) else []
     except Exception as e:
         st.error(f"加载云端数据失败: {e}")
@@ -37,9 +31,13 @@ def load_data():
 def save_data(data):
     try:
         url = f"https://api.jsonbin.io/v3/b/{BIN_ID}"
-        requests.put(url, headers=HEADERS, json=data)
+        # 必须用 {"record": data} 格式包裹，才能被 JSONBin 正确持久化存储
+        payload = {"record": data}
+        res = requests.put(url, headers=HEADERS, json=payload)
+        if res.status_code != 200:
+            st.error(f"同步到云端失败，状态码: {res.status_code}, 返回信息: {res.text}")
     except Exception as e:
-        st.error(f"同步到云端失败: {e}")
+        st.error(f"同步到云端异常: {e}")
 
 st.title("🧠 算法题目随机复习助手")
 
