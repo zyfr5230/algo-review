@@ -3,9 +3,20 @@ import random
 import requests
 import streamlit as st
 
-BIN_ID = st.secrets["JSONBIN_BIN_ID"]
-API_KEY = st.secrets["JSONBIN_API_KEY"]
+import json
+import random
+import requests
+import streamlit as st
 
+# 自动过滤掉可能误入的非ASCII字符（如隐藏空格、特殊符号）
+BIN_ID = str(st.secrets["JSONBIN_BIN_ID"]).strip().encode("ascii", "ignore").decode("ascii")
+API_KEY = str(st.secrets["JSONBIN_API_KEY"]).strip().encode("ascii", "ignore").decode("ascii")
+
+HEADERS = {
+    "Content-Type": "application/json",
+    "X-Master-Key": API_KEY,
+    "X-Bin-Versioning": "false",
+}
 HEADERS = {
     "Content-Type": "application/json",
     "X-Master-Key": API_KEY,
